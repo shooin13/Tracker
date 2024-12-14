@@ -1,6 +1,6 @@
 import UIKit
 
-class FirstViewController: UIViewController {
+class TrackerViewController: UIViewController {
   
   override func viewDidLoad() {
     super.viewDidLoad()
