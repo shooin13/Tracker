@@ -2,17 +2,21 @@ import UIKit
 
 class TrackerViewController: UIViewController {
   
-  // MARK: - Lifecycle
+  // MARK: - Properties
+  
+  private var categories: [TrackerCategory] = []
+  private var completedTrackers: [TrackerRecord] = []
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    configureView()
-    setupNavigationBarItems()
-    setupSubviews()
+    view.backgroundColor = .white
+    
+    setupNavigationBar()
+    setupUIElements()
     setupConstraints()
   }
   
-  // MARK: - Private Properties
+  // MARK: - UI Elements
   
   private lazy var headerLabel: UILabel = {
     let label = UILabel()
@@ -30,7 +34,21 @@ class TrackerViewController: UIViewController {
     textField.layer.cornerRadius = 8
     textField.translatesAutoresizingMaskIntoConstraints = false
     textField.delegate = self
-    configureSearchTextField(textField)
+    
+    let leftPaddingView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 34))
+    textField.leftView = leftPaddingView
+    textField.leftViewMode = .always
+    
+    let container = createSearchPlaceholderContainer()
+    textField.addSubview(container)
+    
+    NSLayoutConstraint.activate([
+      container.leadingAnchor.constraint(equalTo: textField.leadingAnchor, constant: 8),
+      container.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -8),
+      container.centerYAnchor.constraint(equalTo: textField.centerYAnchor)
+    ])
+    
+    textField.addTarget(self, action: #selector(textFieldEditingChanged), for: .editingChanged)
     return textField
   }()
   
@@ -89,19 +107,15 @@ class TrackerViewController: UIViewController {
     return UIBarButtonItem(customView: label)
   }()
   
-  // MARK: - Private Methods
+  // MARK: - Setup Methods
   
-  private func configureView() {
-    view.backgroundColor = .white
-  }
-  
-  private func setupNavigationBarItems() {
+  private func setupNavigationBar() {
     navigationItem.leftBarButtonItem = leftBarButton
     navigationItem.rightBarButtonItem = rightBarButton
     navigationController?.navigationBar.prefersLargeTitles = false
   }
   
-  private func setupSubviews() {
+  private func setupUIElements() {
     view.addSubview(headerLabel)
     view.addSubview(searchTextField)
     view.addSubview(stubView)
@@ -118,16 +132,42 @@ class TrackerViewController: UIViewController {
       searchTextField.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
       searchTextField.heightAnchor.constraint(equalToConstant: 34),
       
-      stubView.topAnchor.constraint(equalTo: searchTextField.bottomAnchor, constant: 220),
-      stubView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      stubView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+      stubView.widthAnchor.constraint(equalTo: view.safeAreaLayoutGuide.widthAnchor),
+      stubView.topAnchor.constraint(equalTo: searchTextField.bottomAnchor, constant: 220)
     ])
   }
   
-  private func configureSearchTextField(_ textField: UITextField) {
-    textField.leftViewMode = .always
-    textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 34))
-    textField.addTarget(self, action: #selector(textFieldEditingChanged), for: .editingChanged)
+  // MARK: - Helpers
+  
+  private func createSearchPlaceholderContainer() -> UIView {
+    let container = UIView()
+    container.translatesAutoresizingMaskIntoConstraints = false
+    
+    let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
+    searchIcon.tintColor = UIColor(named: "YPGray")
+    searchIcon.translatesAutoresizingMaskIntoConstraints = false
+    
+    let placeholderLabel = UILabel()
+    placeholderLabel.text = "Поиск"
+    placeholderLabel.textColor = UIColor(named: "YPGray")
+    placeholderLabel.font = UIFont.systemFont(ofSize: 17)
+    placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+    
+    container.addSubview(searchIcon)
+    container.addSubview(placeholderLabel)
+    
+    NSLayoutConstraint.activate([
+      searchIcon.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
+      searchIcon.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+      searchIcon.widthAnchor.constraint(equalToConstant: 16),
+      searchIcon.heightAnchor.constraint(equalToConstant: 16),
+      
+      placeholderLabel.leadingAnchor.constraint(equalTo: searchIcon.trailingAnchor, constant: 8),
+      placeholderLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+      placeholderLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)
+    ])
+    
+    return container
   }
   
   private func createRightLabel() -> UILabel {
@@ -140,23 +180,28 @@ class TrackerViewController: UIViewController {
     label.layer.masksToBounds = true
     label.translatesAutoresizingMaskIntoConstraints = false
     
-    label.text = getCurrentDateText()
-    let textWidth = (label.text! as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 17)]).width
-    label.widthAnchor.constraint(equalToConstant: textWidth + 16).isActive = true
-    label.heightAnchor.constraint(equalToConstant: 34).isActive = true
+    let dateText = getCurrentDateText()
+    label.text = dateText
+    
+    let textWidth = (dateText as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 17)]).width
+    let labelWidth = textWidth + 11
+    NSLayoutConstraint.activate([
+      label.heightAnchor.constraint(equalToConstant: 34),
+      label.widthAnchor.constraint(equalToConstant: labelWidth)
+    ])
     
     return label
   }
   
   private func getCurrentDateText() -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "dd.MM.yy"
-    return formatter.string(from: Date())
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "dd.MM.yy"
+    return dateFormatter.string(from: Date())
   }
   
   @objc private func textFieldEditingChanged(_ textField: UITextField) {
-    let isEmpty = (textField.text ?? "").isEmpty
-    textField.subviews.first?.isHidden = !isEmpty
+    guard let container = textField.subviews.first else { return }
+    container.isHidden = !(textField.text ?? "").isEmpty
   }
 }
 
@@ -164,9 +209,8 @@ class TrackerViewController: UIViewController {
 
 extension TrackerViewController: UITextFieldDelegate {
   func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-    let currentText = textField.text ?? ""
-    if let range = Range(range, in: currentText) {
-      let updatedText = currentText.replacingCharacters(in: range, with: string)
+    if let text = textField.text, let range = Range(range, in: text) {
+      let updatedText = text.replacingCharacters(in: range, with: string)
       print(updatedText)
     }
     return true
